@@ -1,0 +1,50 @@
+# Global mapping of Salmonella reports over time
+
+import plotly.express as px
+import pycountry
+
+valid_country_names = [country.name.strip().lower() for country in pycountry.countries]
+
+def is_country(name):
+    if not isinstance(name, str):
+        return False
+    
+    name = name.strip().lower()
+    
+    if name in valid_country_names:
+        return True
+    if name in ['usa', 'united states', 'united states of america']:
+        return True
+    return False
+
+df = salmonella_df.copy()
+df.loc[:, 'Country'] = df['Location'].str.split(':').str[0]
+df = df[df['Country'].apply(is_country)]
+df['Year'] = df['Create date'].str.split('-').str[0]
+
+        
+sample_counts = df.groupby(['Country', 'Year']).size().reset_index(name='Samples')
+sample_counts = sample_counts.sort_values('Year')
+
+yearly_totals = sample_counts.groupby('Year')['Samples'].sum()
+
+fig = px.choropleth(
+    sample_counts,
+    locations='Country',      
+    locationmode = 'country names',
+    color='Samples',             # Salmonella sample counts
+    animation_frame = 'Year',
+    color_continuous_scale='Reds',  # Choose any color scale (e.g. 'Blues', 'Viridis', 'Plasma')
+    projection='natural earth',  # Projection style
+    title='Global Salmonella Samples (2010 - 2023)',
+)
+
+fig.update_layout(
+    width=1000,   
+    height=600,   
+    margin={"r":0,"t":30,"l":0,"b":0}  
+)
+
+fig.write_html("salmonella_map.html", full_html=True, include_plotlyjs='cdn')
+
+fig.show()
